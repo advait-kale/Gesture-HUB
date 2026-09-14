@@ -1,0 +1,16 @@
+[project]
+name = "gesture-hub"
+version = "0.1.0"
+description = "IMU gesture recognition (GesturePod-style) with a 1D-CNN, exported to TFLite Micro for ESP32."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "scikit-learn>=1.4",
+    "matplotlib>=3.8",
+    "tensorflow>=2.16,<2.20",
+]
+
+[tool.uv]
+package = false
