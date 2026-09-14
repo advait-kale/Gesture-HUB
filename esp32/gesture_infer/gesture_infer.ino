@@ -65,7 +65,7 @@ void setup() {
     while (true) {}
   }
 
-  static tflite::MicroMutableOpResolver<8> resolver;
+  static tflite::MicroMutableOpResolver<9> resolver;
   resolver.AddConv2D();
   resolver.AddFullyConnected();
   resolver.AddMaxPool2D();
@@ -74,6 +74,7 @@ void setup() {
   resolver.AddReshape();
   resolver.AddSoftmax();
   resolver.AddQuantize();
+  resolver.AddExpandDims();
 
   static tflite::MicroInterpreter interp(g_model, resolver, g_arena, kArenaSize);
   g_interp = &interp;
