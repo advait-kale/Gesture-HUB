@@ -9,17 +9,19 @@
 
 #define GESTURE_INPUT_LEN 128
 #define GESTURE_N_CHANNELS 6
-#define GESTURE_N_CLASSES 2
+#define GESTURE_N_CLASSES 4
 
 // Channel order: ax, ay, az, gx, gy, gz
-static const float GESTURE_MEAN[GESTURE_N_CHANNELS] = { -0.06759345f, -0.94199753f, 0.04703888f, 7.01835489f, 15.12718773f, -1.18540454f };
-static const float GESTURE_STD[GESTURE_N_CHANNELS]  = { 0.32603613f, 0.32603794f, 0.33883062f, 21.27513504f, 78.60173035f, 59.71561432f };
+static const float GESTURE_MEAN[GESTURE_N_CHANNELS] = { -0.02002133f, -0.96465075f, 0.04211516f, 5.29558659f, 11.06392860f, -1.40419054f };
+static const float GESTURE_STD[GESTURE_N_CHANNELS]  = { 0.30722305f, 0.23311853f, 0.29244348f, 18.88832474f, 87.99509430f, 55.09752655f };
 
 // Input quantization (float -> int8)
-#define GESTURE_IN_SCALE 0.0590782873f
-#define GESTURE_IN_ZERO_POINT -26
+#define GESTURE_IN_SCALE 0.0756350532f
+#define GESTURE_IN_ZERO_POINT -36
 
 static const char *GESTURE_LABELS[GESTURE_N_CLASSES] = {
   "double_tap",
+  "left_twist",
+  "right_twist",
   "swirl"
 };

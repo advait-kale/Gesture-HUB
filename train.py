@@ -49,6 +49,44 @@ def class_weights(y: np.ndarray) -> dict[int, float]:
     return {int(c): float(wi) for c, wi in zip(classes, w)}
 
 
+def apply_class_aliases(X, y, class_names, alias_specs):
+    """Optionally merge/rename folder labels, e.g. swirl=twirl."""
+    aliases = {}
+    for spec in alias_specs:
+        if "=" not in spec:
+            raise ValueError(f"Invalid --class-alias {spec!r}; use SOURCE=TARGET")
+        source, target = (part.strip() for part in spec.split("=", 1))
+        if not source or not target:
+            raise ValueError(f"Invalid --class-alias {spec!r}; source and target must be non-empty")
+        aliases[source] = target
+
+    mapped_names = [aliases.get(name, name) for name in class_names]
+    final_names = sorted(set(mapped_names))
+    final_index = {name: i for i, name in enumerate(final_names)}
+    old_to_new = {i: final_index[name] for i, name in enumerate(mapped_names)}
+    y = np.asarray([old_to_new[int(label)] for label in y], dtype=np.int64)
+    if aliases:
+        applied = {source: target for source, target in aliases.items() if source in class_names}
+        if applied:
+            print(f"Class aliases: {applied}")
+    return X, y, final_names
+
+
+def describe_dataset(y: np.ndarray, class_names: list[str]) -> np.ndarray:
+    """Print discovered labels and return their sample counts."""
+    counts = np.bincount(y, minlength=len(class_names))
+    print(f"Loaded {len(y)} samples, {len(class_names)} classes: {class_names}")
+    print("Samples per class: " + ", ".join(
+        f"{name}={int(count)}" for name, count in zip(class_names, counts)
+    ))
+    if len(class_names) < 2:
+        raise ValueError("Training requires at least two class folders with CSV examples.")
+    if np.any(counts < 2):
+        sparse = [f"{name}={int(count)}" for name, count in zip(class_names, counts) if count < 2]
+        raise ValueError("Each class needs at least two CSV examples for a stratified split: " + ", ".join(sparse))
+    return counts
+
+
 def train_one(X_tr, y_tr, X_val, y_val, n_classes, epochs, n_aug):
     """Train a fresh model on one split. Standardization + augmentation are fit
     on the train portion only, then applied to val."""
@@ -105,6 +143,13 @@ def main():
     ap.add_argument("--n-aug", type=int, default=12)
     ap.add_argument("--folds", type=int, default=5)
     ap.add_argument("--skip-cv", action="store_true")
+    ap.add_argument(
+        "--class-alias",
+        action="append",
+        default=[],
+        metavar="SOURCE=TARGET",
+        help="Optionally rename/merge a folder label; repeat as needed (example: swirl=twirl)",
+    )
     args = ap.parse_args()
 
     set_seeds()
@@ -112,13 +157,21 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
 
     X, y, class_names = data.load_dataset(args.dataset, target_len=args.target_len)
+    if len(X) == 0:
+        raise ValueError(f"No usable CSV examples found under {args.dataset!r}.")
+    X, y, class_names = apply_class_aliases(X, y, class_names, args.class_alias)
     n_classes = len(class_names)
-    print(f"Loaded {len(X)} samples, {n_classes} classes: {class_names}")
+    counts = describe_dataset(y, class_names)
     print(f"Window: {X.shape[1]} steps x {X.shape[2]} channels")
 
     if not args.skip_cv:
+        folds = min(args.folds, int(counts.min()))
+        if folds < 2:
+            raise ValueError("Cross-validation needs at least two samples in every class.")
+        if folds != args.folds:
+            print(f"Reducing CV folds from {args.folds} to {folds} to fit the smallest class.")
         print("\n=== Stratified k-fold CV ===")
-        cross_validate(X, y, n_classes, args.folds, args.epochs, args.n_aug)
+        cross_validate(X, y, n_classes, folds, args.epochs, args.n_aug)
 
     print("\n=== Final model (train/val/test split) ===")
     X_tmp, X_test, y_tmp, y_test = train_test_split(
