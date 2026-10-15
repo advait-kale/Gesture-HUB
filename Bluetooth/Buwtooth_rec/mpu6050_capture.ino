@@ -13,6 +13,9 @@
 
 #include "gesture_params.h"  // GESTURE_N_CHANNELS
 
+// Keep the Bluetooth client status visible while this routine waits for motion.
+extern void service_bluetooth();
+
 namespace {
 constexpr uint8_t MPU_ADDR = 0x68;
 constexpr uint8_t REG_PWR_MGMT_1 = 0x6B;
@@ -90,6 +93,7 @@ int capture_gesture(float raw[][GESTURE_N_CHANNELS], int max_rows) {
   while (true) {
     while ((int32_t)(micros() - next) < 0) {}
     next += SAMPLE_US;
+    service_bluetooth();
     read_sample(s);
     float amag = sqrtf(s[0]*s[0] + s[1]*s[1] + s[2]*s[2]);
     if (fabsf(amag - 1.0f) > START_G) break;
@@ -101,6 +105,7 @@ int capture_gesture(float raw[][GESTURE_N_CHANNELS], int max_rows) {
   while (n < max_rows) {
     while ((int32_t)(micros() - next) < 0) {}
     next += SAMPLE_US;
+    service_bluetooth();
     read_sample(s);
     for (int c = 0; c < GESTURE_N_CHANNELS; c++) raw[n][c] = s[c];
     n++;
