@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10141d">
+  <title>Gesture-HUB Live Results</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10141d;
+      --panel: #191f2b;
+      --panel-soft: #202838;
+      --line: #303a4d;
+      --text: #f2f5fa;
+      --muted: #9aa7ba;
+      --accent: #74e0bd;
+      --warn: #ffc66d;
+      --danger: #ff8b8b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 36px 18px;
+      background: radial-gradient(ellipse at 50% -20%, #28334a 0, var(--bg) 58%);
+      color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main { width: min(760px, 100%); margin: 0 auto; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .mark {
+      display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px;
+      background: var(--accent); color: #0e211c; font-size: 22px; font-weight: 800;
+    }
+    h1 { margin: 0; font-size: clamp(23px, 5vw, 30px); letter-spacing: -.04em; }
+    .subtitle { margin: 3px 0 0; color: var(--muted); font-size: 14px; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 999px; padding: 7px 11px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #758198; }
+    .pill.online .dot { background: var(--accent); box-shadow: 0 0 12px #74e0bd88; }
+    .pill.error .dot { background: var(--danger); }
+    .card { border: 1px solid var(--line); border-radius: 20px; background: #191f2bee; box-shadow: 0 18px 55px #0003; }
+    .config { padding: 18px; margin-bottom: 16px; }
+    label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+    .form { display: flex; gap: 9px; }
+    input {
+      min-width: 0; flex: 1; border: 1px solid var(--line); border-radius: 11px; padding: 12px 13px;
+      background: #10151e; color: var(--text); font: inherit; outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    button { border: 0; border-radius: 11px; padding: 0 17px; background: var(--accent); color: #10211c; font: inherit; font-weight: 750; cursor: pointer; }
+    button:hover { filter: brightness(1.06); }
+    .hint { margin: 9px 0 0; color: var(--muted); font-size: 12px; }
+    .result { padding: clamp(20px, 5vw, 30px); margin-bottom: 16px; }
+    .result-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .eyebrow { color: var(--muted); text-transform: uppercase; letter-spacing: .13em; font-size: 11px; font-weight: 750; }
+    .accept { border-radius: 999px; padding: 5px 10px; background: #74e0bd1a; color: var(--accent); font-size: 12px; font-weight: 750; }
+    .accept.low { background: #ffc66d1a; color: var(--warn); }
+    .gesture { overflow-wrap: anywhere; margin: 15px 0 7px; font-size: clamp(34px, 9vw, 58px); line-height: 1.08; letter-spacing: -.055em; font-weight: 780; }
+    .waiting { color: var(--muted); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 20px; color: var(--muted); font-size: 13px; }
+    .meta strong { color: var(--text); font-weight: 650; }
+    .section-head { display: flex; justify-content: space-between; align-items: baseline; padding: 19px 20px 12px; }
+    .section-head h2 { margin: 0; font-size: 16px; }
+    .section-head span { color: var(--muted); font-size: 12px; }
+    .events { padding: 0 12px 12px; }
+    .event { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 9px; border-top: 1px solid var(--line); }
+    .event-name { font-weight: 680; }
+    .event-confidence { color: var(--accent); font-variant-numeric: tabular-nums; }
+    .event-time { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+    .empty { border-top: 1px solid var(--line); padding: 15px 9px 9px; color: var(--muted); font-size: 13px; }
+    .foot { margin: 14px 4px 0; color: var(--muted); text-align: center; font-size: 12px; }
+    @media (max-width: 520px) {
+      body { padding: 24px 13px; }
+      .top { align-items: flex-start; }
+      .pill { padding: 6px 9px; font-size: 12px; }
+      .form { flex-direction: column; }
+      button { min-height: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="top">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">G</div>
+        <div>
+          <h1>Gesture-HUB</h1>
+          <p class="subtitle">Live ESP32 gesture results</p>
+        </div>
+      </div>
+      <div id="connection" class="pill"><span class="dot"></span><span id="connectionText">Connecting</span></div>
+    </header>
+
+    <section class="card config" aria-label="API connection">
+      <label for="apiBase">ESP32 API address</label>
+      <div class="form">
+        <input id="apiBase" type="url" inputmode="url" autocomplete="url" spellcheck="false" value="http://172.27.202.93" aria-describedby="apiHint">
+        <button id="connectButton" type="button">Connect</button>
+      </div>
+      <p id="apiHint" class="hint">Use the IP printed in Arduino Serial Monitor. Keep this device on the same Wi-Fi network.</p>
+    </section>
+
+    <section class="card result" aria-live="polite">
+      <div class="result-head">
+        <span class="eyebrow">Latest gesture</span>
+        <span id="accepted" class="accept" hidden>Accepted</span>
+      </div>
+      <div id="gesture" class="gesture waiting">Waiting for gesture</div>
+      <div id="message" class="subtitle">The dashboard checks the API every second.</div>
+      <div class="meta">
+        <span>Confidence <strong id="confidence">—</strong></span>
+        <span>Event <strong id="eventId">—</strong></span>
+        <span>ESP32 time <strong id="eventTime">—</strong></span>
+        <span>Last checked <strong id="checkedAt">—</strong></span>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Recent gestures">
+      <div class="section-head"><h2>Recent results</h2><span>Up to 12 seen by this page</span></div>
+      <div id="events" class="events"><div class="empty">No results received yet.</div></div>
+    </section>
+    <p class="foot">Polling <code>/api/result</code> once per second</p>
+  </main>
+
+  <script>
+    const DEFAULT_API = "http://172.27.202.93";
+    const POLL_MS = 1000;
+    const MAX_EVENTS = 12;
+    const $ = (id) => document.getElementById(id);
+    const baseInput = $("apiBase");
+    let lastEventId = null;
+    let events = [];
+    let pollTimer = null;
+    let isPolling = false;
+
+    try {
+      baseInput.value = localStorage.getItem("gestureHubApiBase") || DEFAULT_API;
+    } catch (_) {}
+
+    function apiBase() {
+      let value = baseInput.value.trim().replace(/\/+$/, "");
+      if (value && !/^https?:\/\//i.test(value)) value = `http://${value}`;
+      return value;
+    }
+
+    function setConnection(state, text) {
+      const pill = $("connection");
+      pill.classList.toggle("online", state === "online");
+      pill.classList.toggle("error", state === "error");
+      $("connectionText").textContent = text;
+    }
+
+    function addEvent(result) {
+      if (result.event_id === lastEventId) return;
+      lastEventId = result.event_id;
+      events.unshift({
+        name: result.gesture,
+        confidence: Number(result.confidence),
+        accepted: Boolean(result.accepted),
+        time: new Date().toLocaleTimeString()
+      });
+      events = events.slice(0, MAX_EVENTS);
+      renderEvents();
+    }
+
+    function renderEvents() {
+      const host = $("events");
+      if (!events.length) {
+        host.innerHTML = '<div class="empty">No results received yet.</div>';
+        return;
+      }
+      host.replaceChildren(...events.map((event) => {
+        const row = document.createElement("div");
+        row.className = "event";
+        const name = document.createElement("span");
+        name.className = "event-name";
+        name.textContent = event.name + (event.accepted ? "" : " · below threshold");
+        const confidence = document.createElement("span");
+        confidence.className = "event-confidence";
+        confidence.textContent = `${(event.confidence * 100).toFixed(1)}%`;
+        const time = document.createElement("span");
+        time.className = "event-time";
+        time.textContent = `Received ${event.time}`;
+        row.append(name, confidence, time);
+        return row;
+      }));
+    }
+
+    async function poll() {
+      if (isPolling) return;
+      isPolling = true;
+      const started = performance.now();
+      try {
+        const response = await fetch(`${apiBase()}/api/result`, {
+          cache: "no-store",
+          headers: { "Accept": "application/json" }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json();
+        setConnection("online", "ESP32 connected");
+        $("checkedAt").textContent = new Date().toLocaleTimeString();
+
+        if (!result.available) {
+          $("gesture").textContent = "Waiting for gesture";
+          $("gesture").classList.add("waiting");
+          $("message").textContent = result.message || "Move the sensor to record a gesture.";
+          $("accepted").hidden = true;
+          $("confidence").textContent = "—";
+          $("eventId").textContent = "—";
+          $("eventTime").textContent = "—";
+        } else {
+          $("gesture").textContent = result.gesture || "Unknown gesture";
+          $("gesture").classList.remove("waiting");
+          $("message").textContent = result.accepted ? "Gesture recognized" : "Low confidence — result rejected by threshold";
+          const badge = $("accepted");
+          badge.hidden = false;
+          badge.textContent = result.accepted ? "Accepted" : "Low confidence";
+          badge.classList.toggle("low", !result.accepted);
+          $("confidence").textContent = `${(Number(result.confidence) * 100).toFixed(1)}%`;
+          $("eventId").textContent = result.event_id;
+          $("eventTime").textContent = `${(Number(result.timestamp_ms) / 1000).toFixed(1)} s`;
+          addEvent(result);
+        }
+      } catch (error) {
+        setConnection("error", "API unreachable");
+        $("checkedAt").textContent = new Date().toLocaleTimeString();
+        $("message").textContent = `${error.message}. Check the ESP32 IP and Wi-Fi connection.`;
+      } finally {
+        isPolling = false;
+        pollTimer = window.setTimeout(poll, Math.max(0, POLL_MS - (performance.now() - started)));
+      }
+    }
+
+    $("connectButton").addEventListener("click", () => {
+      try { localStorage.setItem("gestureHubApiBase", apiBase()); } catch (_) {}
+      if (pollTimer) window.clearTimeout(pollTimer);
+      lastEventId = null;
+      events = [];
+      renderEvents();
+      poll();
+    });
+    baseInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") $("connectButton").click();
+    });
+    poll();
+  </script>
+</body>
+</html>
